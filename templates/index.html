@@ -1,0 +1,25 @@
+<html>
+    <head>
+        <title>
+            Comments Section
+        </title>
+        <link rel="stylesheet" type="text/css" href="/static/index.css">
+    </head>
+    <body>
+        <form method="POST">
+            <textarea name="comment">
+            </textarea>
+            <div>
+                <button type="submit"> Post Comment </button>
+            </div>
+        </form>
+        <h1>
+            Comments
+        </h1>
+        {{ range . }}
+        <div>
+            {{ . }}
+        </div>
+        {{ end }}
+    </body>
+</html>
