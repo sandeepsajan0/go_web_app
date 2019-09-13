@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/go-redis/redis"
 	"github.com/gorilla/sessions"
+	"golang.org/x/crypto/bcrypt"
 	"html/template"
 )
 
@@ -22,6 +23,11 @@ func byehandler(w http.ResponseWriter, r *http.Request){
 }
 
 func getIndexHandler(w http.ResponseWriter, r *http.Request){
+	session, _ := store.Get(r, "session")
+	_, ok := session.Values["username"]
+	if !ok{
+		http.Redirect(w, r, "/login", 302)
+	}
 	comments, err := client.LRange("comments", 0, 10).Result()
 	if err != nil{
 		return
@@ -43,9 +49,19 @@ func getLoginHandler(w http.ResponseWriter, r *http.Request){
 func postLoginHandler(w http.ResponseWriter, r *http.Request){
 	r.ParseForm()
 	username := r.PostForm.Get("username")
+	password := r.PostForm.Get("password")
+	hash, err := client.Get("user:" + username).Bytes()
+	if err != nil{
+		return
+	}
+	err = bcrypt.CompareHashAndPassword(hash, []byte(password))
+	if err != nil{
+		return
+	}
 	session, _ := store.Get(r, "session")
 	session.Values["username"] = username
 	session.Save(r, w)
+	http.Redirect(w, r, "/get_comments", 302)
 }
 
 func testLogin(w http.ResponseWriter, r *http.Request){
@@ -61,10 +77,30 @@ func testLogin(w http.ResponseWriter, r *http.Request){
 	w.Write([]byte(username))
 }
 
+func getRegister(w http.ResponseWriter, r *http.Request){
+	templates.ExecuteTemplate(w, "register.html", nil)
+}
+
+func postRegister(w http.ResponseWriter, r *http.Request){
+	r.ParseForm()
+	username := r.PostForm.Get("username")
+	password := r.PostForm.Get("password")
+	cost := bcrypt.DefaultCost
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), cost)
+	if err != nil{
+		return
+	}
+	client.Set("user:" + username, hash, 0)
+	http.Redirect(w, r, "/login", 302)
+}
+
 func main() {
 	client = redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	})
+	store.Options = &sessions.Options{
+		MaxAge:   60 * 1, 
+		HttpOnly: true,}
 	templates = template.Must(template.ParseGlob("templates/*.html"))
 	r := mux.NewRouter()
 	r.HandleFunc("/hello", handler)
@@ -74,6 +110,8 @@ func main() {
 	r.HandleFunc("/login", getLoginHandler).Methods("GET")
 	r.HandleFunc("/login", postLoginHandler).Methods("POST")
 	r.HandleFunc("/login/session", testLogin).Methods("GET")
+	r.HandleFunc("/register", getRegister).Methods("GET")
+	r.HandleFunc("/register", postRegister).Methods("POST")
 	f := http.FileServer(http.Dir("static/"))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", f))
 	http.Handle("/", r)
