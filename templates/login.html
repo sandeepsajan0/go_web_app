@@ -5,6 +5,11 @@
         </title>
     </head>
     <body>
+        <h2>
+        {{ if . }}
+        <div class="error" style="color:blue">{{ . }}</div>
+        {{ end }}
+        </h2>
         <h1>
             Login
         </h1>

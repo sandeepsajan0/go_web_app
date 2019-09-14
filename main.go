@@ -22,40 +22,48 @@ func byehandler(w http.ResponseWriter, r *http.Request){
 	fmt.Fprint(w, "Bye Bye world")
 }
 
-func getIndexHandler(w http.ResponseWriter, r *http.Request){
-	session, _ := store.Get(r, "session")
-	_, ok := session.Values["username"]
-	if !ok{
-		http.Redirect(w, r, "/login", 302)
-	}
+func getComments(w http.ResponseWriter, r *http.Request){
 	comments, err := client.LRange("comments", 0, 10).Result()
 	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Database Error"))
 		return
 	}
 	templates.ExecuteTemplate(w, "index.html", comments)
 }
 
-func postIndexHandler(w http.ResponseWriter, r *http.Request){
+func postComments(w http.ResponseWriter, r *http.Request){
 	r.ParseForm()
 	comment := r.PostForm.Get("comment")
-	client.LPush("comments", comment)
+	err := client.LPush("comments", comment).Err()
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Database Error"))
+		return
+	}
 	http.Redirect(w, r, "/get_comments", 302)
 }
 
-func getLoginHandler(w http.ResponseWriter, r *http.Request){
+func getLogin(w http.ResponseWriter, r *http.Request){
 	templates.ExecuteTemplate(w, "login.html", nil)
 }
 
-func postLoginHandler(w http.ResponseWriter, r *http.Request){
+func postLogin(w http.ResponseWriter, r *http.Request){
 	r.ParseForm()
 	username := r.PostForm.Get("username")
 	password := r.PostForm.Get("password")
 	hash, err := client.Get("user:" + username).Bytes()
-	if err != nil{
+	if err == redis.Nil{
+		templates.ExecuteTemplate(w, "login.html", "Incorrect username")
+		return
+	} else if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
 		return
 	}
 	err = bcrypt.CompareHashAndPassword(hash, []byte(password))
 	if err != nil{
+		templates.ExecuteTemplate(w, "login.html", "Incorrect password")
 		return
 	}
 	session, _ := store.Get(r, "session")
@@ -88,10 +96,28 @@ func postRegister(w http.ResponseWriter, r *http.Request){
 	cost := bcrypt.DefaultCost
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), cost)
 	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
 		return
 	}
-	client.Set("user:" + username, hash, 0)
+	e := client.Set("user:" + username, hash, 0).Err()
+	if e != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Database Error"))
+		return
+	}
 	http.Redirect(w, r, "/login", 302)
+}
+
+func authMiddleware(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request){
+		session, _ := store.Get(r, "session")
+		_, ok := session.Values["username"]
+		if !ok{
+			http.Redirect(w, r, "/login", 302)
+		}
+		handler.ServeHTTP(w, r)
+	}
 }
 
 func main() {
@@ -105,10 +131,10 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/hello", handler)
 	r.HandleFunc("/goodbye", byehandler)
-	r.HandleFunc("/get_comments", getIndexHandler).Methods("GET")
-	r.HandleFunc("/get_comments", postIndexHandler).Methods("POST")
-	r.HandleFunc("/login", getLoginHandler).Methods("GET")
-	r.HandleFunc("/login", postLoginHandler).Methods("POST")
+	r.HandleFunc("/get_comments", authMiddleware(getComments)).Methods("GET")
+	r.HandleFunc("/get_comments", authMiddleware(postComments)).Methods("POST")
+	r.HandleFunc("/login", getLogin).Methods("GET")
+	r.HandleFunc("/login", postLogin).Methods("POST")
 	r.HandleFunc("/login/session", testLogin).Methods("GET")
 	r.HandleFunc("/register", getRegister).Methods("GET")
 	r.HandleFunc("/register", postRegister).Methods("POST")
