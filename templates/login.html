@@ -3,8 +3,10 @@
         <title>
             Login
         </title>
+        <link rel="stylesheet" type="text/css" href="/static/index.css">
     </head>
     <body>
+        <div class="register">
         <h2>
         {{ if . }}
         <div class="error" style="color:blue">{{ . }}</div>
@@ -16,10 +18,11 @@
         <form method="POST">
             Username: <input name="username">
             Password: <input name="password">
-            <div>
+            <div class="button">
                 <button type="submit"> Login </button>
                 <button onclick="location.href='/register'" type="button"> Sign up </button>
             </div>
         </form>
+        </div>
     </body>
 </html>

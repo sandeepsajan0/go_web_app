@@ -12,10 +12,14 @@ Go web app for beginners. Good ref. to start with go in web.
 
 4. Able to store session on url: `/login` and can test session username on url: `/login/session`.
 
-5. Implemented the login and register feature. Session will be stored only for 1 min(you can change the maxAge). Comments feature can be used only after login.  
+5. Implemented the login and register feature. Session will be stored only for 10 min(you can change the maxAge). Comments feature can be used only after login.  
+
+6. Structurize the whole code in modules models, session, routes, middleware. Add static/css file.
 
 ## Installation:
 
 Clone the repository and run `go run main.go` inside the repo folder.
+
+You also need to start redis server on its default port `:6379`.
 
 * Feel free to add more features and make more easy for beginners.

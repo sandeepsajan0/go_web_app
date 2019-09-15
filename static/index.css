@@ -1,7 +1,31 @@
-body > div {
-    padding: 5px;
-    width: 100px;
-    margin: 5px;
-    background: rgba(201, 188, 115, 0.836);
-    border: 1px solid #aaa;
+
+
+.register {
+    width: 60%;
+    margin: 2em;
+}
+
+body {
+    background: blanchedalmond;
+}
+
+.button {
+    margin: 1em;
+    text-align: center;
+}
+
+.single-comment {
+    margin: 2em;
+}
+
+.commentlist {
+    text-align: center;
+    width: 60%;
+    margin-left: 20%;
+    margin-top: 5%;
+}
+
+textarea {
+    width: 500px;
+    height: 100px;
 }

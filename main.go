@@ -11,7 +11,7 @@ import (
 func main() {
 	models.Init()
 	session.Store.Options = &sessions.Options{
-		MaxAge:   60 * 1, 
+		MaxAge:   60 * 10, 
 		HttpOnly: true,}
 	r := routes.GetRoutes()
 	http.Handle("/", r)

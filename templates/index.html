@@ -6,6 +6,7 @@
         <link rel="stylesheet" type="text/css" href="/static/index.css">
     </head>
     <body>
+        <div class="commentlist">
         <form method="POST">
             <textarea name="comment">
             </textarea>
@@ -17,9 +18,10 @@
             Comments
         </h1>
         {{ range . }}
-        <div>
+        <div class="single-comment">
             {{ . }}
         </div>
         {{ end }}
+        </div>
     </body>
 </html>
